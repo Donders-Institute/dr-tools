@@ -57,8 +57,6 @@ github.com/Donders-Institute/filer-gateway v0.0.0-20211105161122-6429935a9e76/go
 github.com/Donders-Institute/tg-toolset-golang v0.0.0-20200706153117-b6477a4b18ed/go.mod h1:jqZNvc8UmDvMRPxKIfp61Q45Pn9m13wrRFcN/Ou9cg4=
 github.com/Donders-Institute/tg-toolset-golang v0.0.0-20201202104114-808bfe996dfa/go.mod h1:Gll3u5ErHyNsP8RPsx7TGJaHNbmY8scvlUO4MalzYT0=
 github.com/Donders-Institute/tg-toolset-golang v0.0.0-20210318083220-2b068d966a57/go.mod h1:mqlh+6zt+6P20+kJCXMt0zo6VC4MqbN3HEPIBHVTOqk=
-github.com/Donders-Institute/tg-toolset-golang v0.0.0-20220126150328-ac9b35ed2543 h1:NsisISBivgopdd0p+mStDbUvDdaZYcKBrznOXqj5edI=
-github.com/Donders-Institute/tg-toolset-golang v0.0.0-20220126150328-ac9b35ed2543/go.mod h1:QYusU9+seUICbn4kKWGC3YMdv+duQh68WY1fZwQJhm4=
 github.com/Donders-Institute/tg-toolset-golang v0.0.0-20220127100715-6f5213f00514 h1:qbX5QwcXCHhPD7F0DPW8WFxOiYhp1pxqX1WItOf8n3M=
 github.com/Donders-Institute/tg-toolset-golang v0.0.0-20220127100715-6f5213f00514/go.mod h1:QYusU9+seUICbn4kKWGC3YMdv+duQh68WY1fZwQJhm4=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=

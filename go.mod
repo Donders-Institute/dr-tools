@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/Donders-Institute/tg-toolset-golang v0.0.0-20220127100715-6f5213f00514
 	github.com/c-bata/go-prompt v0.2.6
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/schollz/progressbar/v3 v3.8.5
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
@@ -18,7 +19,6 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
