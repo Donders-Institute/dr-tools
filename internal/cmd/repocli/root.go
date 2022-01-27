@@ -1,16 +1,16 @@
 package repocli
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
-	"encoding/hex"
 
+	"github.com/Donders-Institute/dr-tools/external/cobrashell"
 	"github.com/Donders-Institute/tg-toolset-golang/pkg/config"
 	log "github.com/Donders-Institute/tg-toolset-golang/pkg/logger"
 	ustr "github.com/Donders-Institute/tg-toolset-golang/pkg/strings"
-	"github.com/Donders-Institute/tg-toolset-golang/pkg/shell"
 	"github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -61,7 +61,7 @@ func init() {
 	)
 
 	// subcommand for entering interactive shell prompt
-	shellCmd := shell.New(
+	shellCmd := cobrashell.New(
 		rootCmd,
 		New,
 		prompt.OptionSuggestionBGColor(prompt.DarkGray),
