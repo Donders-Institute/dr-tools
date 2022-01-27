@@ -57,6 +57,7 @@ $ repocli login
 You will be asked to provide the WebDAV's baseURL, username and password.  After providing those values, type `y` to save the credential to the configuration file.  Once it is done successfully, you can reuse the configuration file in the future to connect to the same WebDAV endpoint.
 
 💡You can use the `login` subcommand with the `-c` option to create multiple configuration files, each for a different WebDAV endpoint.
+
 ❗The password in the configuration file is encrypted with the signatures of the file path and the username.  Changes on the signatures (e.g. renaming the configuration file) will make the password invalid.
 
 __The shell mode__
