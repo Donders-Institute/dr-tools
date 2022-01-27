@@ -80,6 +80,12 @@ In the shell mode, the following additional operations are enabled:
 - lpwd: show the present working directory at local
 - lls: list content in the present working directory at local
 
+Hereafter are examples showcasing how to use various subcommands.  You can find more detailed and up-to-date usage via the `help` subcommand.  For example, the online help of the `get` subcommand can be found by:
+
+```bash
+$ repocli help get
+```
+
 ### listing a directory
 
 Given a collection with identifier `di.dccn.DAC_3010000.01_173`, the WebDAV directory in which the collection data is stored is `/dccn/DAC_3010000.01_173`.  To list the content of this WebDAV directory, one does
