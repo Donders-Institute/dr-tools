@@ -26,18 +26,21 @@ CLI tools for interacting various services managed by the TG.
 mkdir -p %{gopath}
 # copy entire directory into gopath, this duplicate the source code
 GOPATH=%{gopath} make
+%{gopath}/bin/repocli completion bash > %{gopath}/bash_completion
 
 %install
 mkdir -p %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_sbindir}
-#mkdir -p %{buildroot}/%{_sysconfdir}/bash_completion.d
+mkdir -p %{buildroot}/%{_sysconfdir}/bash_completion.d
 ## install files for client tools
 install -m 755 %{gopath}/bin/repoadm %{buildroot}/%{_sbindir}/repoadm
 install -m 755 %{gopath}/bin/repocli %{buildroot}/%{_bindir}/repocli
+install -m 644 %{gopath}/bash_completion %{buildroot}/%{_sysconfdir}/bash_completion.d/repocli
 
 %files
 %{_sbindir}/repoadm
 %{_bindir}/repocli
+%{_sysconfdir}/bash_completion.d/repocli
 
 %clean
 chmod -R +w %{gopath}
@@ -48,3 +51,4 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Thu Jan 27 2022 Hong Lee <h.lee@donders.ru.nl> - 0.1
 - first rpmbuild implementation
+- include bash completion for repocli
