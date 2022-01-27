@@ -80,14 +80,6 @@ In the shell mode, the following additional operations are enabled:
 - lpwd: show the present working directory at local
 - lls: list content in the present working directory at local
 
-The `login` operation can be used to configure a new connection if you choose to save the credential.  For instance, you can start the shell mode using the `-c` option to point to a non-existing file:
-
-```bash
-$ repocli shell -c myrepo.yml
-```
-
-Then follow the prompt to provide the necessary information for connection and choose `y` to save the credential.  Once the login is done successfully, the file `myrepo.xml` will be created with the connection information. You can then reuse the configuration file in the future.
-
 ### listing a directory
 
 Given a collection with identifier `di.dccn.DAC_3010000.01_173`, the WebDAV directory in which the collection data is stored is `/dccn/DAC_3010000.01_173`.  To list the content of this WebDAV directory, one does
