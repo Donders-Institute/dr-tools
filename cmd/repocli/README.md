@@ -62,7 +62,7 @@ You will be asked to provide the WebDAV's baseURL, username and password.  After
 
 __The shell mode__
 
-In addition to run the operations as individual commands (single-command mode), the CLI can also be used in an interactive shell.  One uses the `shell` command to enter the shell mode:
+In addition to run the program's subcommands as individual shell commands (single-command mode), the CLI can also be used as an interactive shell (shell mode).  One uses the `shell` command to enter the shell mode:
 
 ```bash
 $ repocli shell
