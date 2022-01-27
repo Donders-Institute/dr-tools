@@ -23,10 +23,11 @@ Usage:
   repocli [command]
 
 Available Commands:
-  completion  generate the autocompletion script for the specified shell
+  completion  Generate the autocompletion script for the specified shell
   cp          copy file or directory in the repository
   get         download file or directory from the repository
   help        Help about any command
+  login       login the repository with the data-access account
   ls          list file or directory in the repository
   mkdir       create new directory in the repository
   mv          move file or directory in the repository
@@ -35,7 +36,7 @@ Available Commands:
   shell       start an interactive shell
 
 Flags:
-  -c, --config path       path of the configuration YAML file. (default "/home/honlee/.repocli.yml")
+  -c, --config path       path of the configuration YAML file. (default "/home/tg/honlee/.repocli.yml")
   -h, --help              help for repocli
   -n, --nthreads number   number of concurrent worker threads. (default 4)
   -s, --silent            set to slient mode (i.e. do not show progress)
@@ -43,34 +44,19 @@ Flags:
   -v, --verbose           verbose output
 
 Use "repocli [command] --help" for more information about a command.
-
-A CLI for managing data content of the Donders Repository collections.
 ```
 
-The username/password of the data-access account should be provided in the configuration file (i.e. the `-c` flag) in YAML format.  The default location of this configuration file is `${HOME}/.repocli.yml` on Linux/MacOSX and `C:\Users\<username>\.repocli.yml` on Windows. Hereafter is an example:
+__The configuration file__
 
-```yaml
-repository:
-  username: "username"
-  password: "password"
-```
-
-When using the single-command mode (i.e. not the shell mode, see below), the base URL of the repository should also be provided via the `-u` option.  It can also be provided via the `baseurl` key in the configuration file, e.g.
-
-```yaml
-repository:
-  baseurl: "https://webdav.data.donders.ru.nl"
-  username: "username"
-  password: "password"
-```
-
-If the `-u` option and the `baseurl` key are both specified, the value provided by the `-u` option takes precedence.
-
-__⚠️ The configuration is in plain text and thus you should make the configuration file only accessible to yourself. ⚠️__ On Linux and MacOSX, one can run the following command in a terminal:
+The credential (username and password) of the data-access account should be provided in a configuration file (specified by the `-c` option) in the YAML format.  The default location of this configuration file is `${HOME}/.repocli.yml` on Linux/MacOSX and `C:\Users\<username>\.repocli.yml` on Windows.  Since the program expects that the password stored in the configuration file is encrypted, it is better to use the following command to generate (or overwrite) the file:
 
 ```bash
-$ chmod 600 $HOME/.repocli.yml
+$ repocli login
 ```
+
+You will be asked to provide the WebDAV's baseURL, username and password.  After providing those values, type `y` to save the credential to the configuration file.  Once it is done successfully, you can reuse the configuration file in the future to connect to the same WebDAV endpoint.
+
+💡You can use the `login` subcommand with the `-c` option to create multiple configuration files, each for a different WebDAV endpoint.
 
 __The shell mode__
 
@@ -86,7 +72,6 @@ The CLI's specific prompt `> repocli` will be displayed as the screenshot below,
 
 In the shell mode, the following additional operations are enabled:
 
-- login: login the repository
 - cd: change the present working directory in the repository
 - pwd: show the present working directory in the repository
 - lcd: change the present working directory at local
