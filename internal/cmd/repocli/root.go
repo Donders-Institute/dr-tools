@@ -59,6 +59,8 @@ func init() {
 		"url", "u", davBaseURL,
 		"`URL` of the webdav server.",
 	)
+	// let the flag `--url` override the `repository.baseurl` in the config file.
+	viper.BindPFlag("repository.baseurl", rootCmd.PersistentFlags().Lookup("url"))
 
 	// subcommand for entering interactive shell prompt
 	shellCmd := cobrashell.New(
@@ -89,16 +91,6 @@ func init() {
 		ConsoleLevel:      log.Info,
 	}
 	log.NewLogger(cfg, log.InstanceLogrusLogger)
-}
-
-// loadConfig loads configuration YAML file specified by `configFile`.
-// This function fatals out if there is an error.
-func loadConfig() config.Configuration {
-	conf, err := config.LoadConfig(configFile)
-	if err != nil {
-		log.Errorf("%s", err)
-	}
-	return conf
 }
 
 // var TestCmd = &cobra.Command{
@@ -151,9 +143,8 @@ func New() *cobra.Command {
 			}
 			log.NewLogger(cfg, log.InstanceLogrusLogger)
 
-			// load repo configuration, with flag `--url` overwritten the `repository.baseurl` in the config file.
-			viper.BindPFlag("repository.baseurl", cmd.Flags().Lookup("url"))
-			repoCfg := loadConfig().Repository
+			c, _ := config.LoadConfig(configFile)
+			repoCfg := c.Repository
 
 			repoUser := repoCfg.Username
 			repoPass, _ := decryptPass(repoUser, repoCfg.Password)
