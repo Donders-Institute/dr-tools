@@ -56,8 +56,9 @@ var overwrite bool
 var longformat bool
 var errfile string
 var mgetDir string
-var mgetParent string
+var mgetStrip string
 var mputDir string
+var parents bool
 
 // command to list a file or the content of a directory in the repository.
 func lsCmd() *cobra.Command {
@@ -450,8 +451,32 @@ func mgetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mget <repo_file1|repo_dir1> [repo_file2|repo_dir2] ...",
 		Short: "download multiple files or directories from the repository",
-		Long:  ``,
-		Args:  cobra.MinimumNArgs(1),
+		Long: `
+The "mget" subcommand is for downloading multiple files and directories from the repository (as the sources) into a directory at local (as the destination).
+
+The sources are specified via arguments; while the destination is specified by an optional flag "-d".
+
+If the destination flag "-d" is not specified, the default is the current working directory at local. 
+
+By default, sources are downloaded into the destination with file or directory constructed from the base (last) part of the path. For example,
+
+  * for a source file "/dccn/DAC_3010000.01_173/test.txt", it will be downloaded to a file called "test.txt" under the current working directory.
+
+  * for a source directory "/dccn/DAC_3010000.01_173/testdir", the content (files and sub-directories) of this directory will be downloaded to a directory "testdir" under the current working directory.
+
+This behavior can be changed by using the "--parents" flag, which will preserve the sources' parent directories under the destination.  Using the same example,
+
+  * the source file "/dccn/DAC_3010000.01_173/test.txt" will be downloaded to "dccn/DAC_3010000.01_173/test.txt" under the current working directory, and
+
+  * the content of the source "/dccn/DAC_3010000.01_173/testdir" will be downloaded to "dccn/DAC_3010000.01_173/testdir" under the current working directory.
+
+The "--parents" flag can be combined with the "--strip" flag to strip a part on the source path.  For instance, if using "--strip=dccn" with "--parents",
+
+  * the source "/dccn/DAC_3010000.01_173/test.txt" is then downloaded to "DAC_3010000.01_173/test.txt" under the current working directory, and
+   
+  * the content of the source "/dccn/DAC_3010000.01_173/testdir" is downloaded to "DAC_3010000.01_173/testdir" under the current working directory.
+		`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			// resolve destination to local absolute path
@@ -503,7 +528,7 @@ func mgetCmd() *cobra.Command {
 			}()
 
 			// resolve common parent into a clean, absolute path
-			mgetParent := getCleanRepoPath(mgetParent)
+			mgetStrip := getCleanRepoPath(mgetStrip)
 
 			// walk through all arguments to construct operation inputs
 		loop:
@@ -528,34 +553,43 @@ func mgetCmd() *cobra.Command {
 					if f.IsDir() {
 
 						// construction local destination taking into account `mgetParent`
-						lpp := filepath.Join(
-							lp,
-							strings.TrimPrefix(p, mgetParent),
-						)
+						var elp = []string{lp}
+						if parents {
+							elp = append(elp, strings.Split(strings.TrimPrefix(p, mgetStrip), "/")...)
+						} else {
+							elp = append(elp, path.Base(p))
+						}
+
+						lpp := filepath.Join(elp...)
+						if err := os.MkdirAll(lpp, 0755); err != nil {
+							log.Errorf("%s\n", err)
+						}
 
 						pfinfoLocal := pathFileInfo{
 							path: lpp,
 						}
-
-						if err := os.MkdirAll(lpp, pfinfoRepo.info.Mode()); err != nil {
-							return err
-						}
-
 						walkRepoDirForGet(ctx, pfinfoRepo, pfinfoLocal, ichan, false, pbar)
 
 					} else {
 
 						pbar.ChangeMax64(pbar.GetMax64() + pfinfoRepo.info.Size())
 
-						lpp := filepath.Join(
-							lp,
-							strings.TrimPrefix(p, mgetParent),
-						)
+						elp := []string{lp}
+
+						if parents {
+							elp = append(elp, strings.Split(strings.TrimPrefix(p, mgetStrip), "/")...)
+						} else {
+							elp = append(elp, path.Base(p))
+						}
+
+						lpp := filepath.Join(elp...)
+						if err := os.MkdirAll(filepath.Dir(lpp), 0755); err != nil {
+							log.Errorf("%s\n", err)
+						}
 
 						pfinfoLocal := pathFileInfo{
 							path: lpp,
 						}
-
 						ichan <- opInput{
 							src: pfinfoRepo,
 							dst: pfinfoLocal,
@@ -617,8 +651,9 @@ func mgetCmd() *cobra.Command {
 	// 	},
 	// )
 
-	cmd.Flags().StringVarP(&mgetParent, "parent", "p", cwd, "common parent repo path")
-	cmd.Flags().StringVarP(&mgetDir, "dest", "d", lcwd, "destination path at local")
+	cmd.Flags().StringVarP(&mgetDir, "dest", "d", lcwd, "destination `path` at local")
+	cmd.Flags().BoolVarP(&parents, "parents", "", false, "use full source name under destination")
+	cmd.Flags().StringVarP(&mgetStrip, "strip", "", cwd, "`path` to be stripped from sources, only applicable with --parents")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
 	return cmd
