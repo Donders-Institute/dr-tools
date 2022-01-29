@@ -168,7 +168,7 @@ func New() *cobra.Command {
 		cmd.AddCommand(cdCmd, pwdCmd, lcdCmd, lpwdCmd, llsCmd())
 	}
 
-	cmd.AddCommand(lsCmd(), putCmd(), getCmd(), rmCmd(), mvCmd(), cpCmd(), mkdirCmd, loginCmd)
+	cmd.AddCommand(lsCmd(), putCmd(), getCmd(), mputCmd(), mgetCmd(), rmCmd(), mvCmd(), cpCmd(), mkdirCmd, loginCmd)
 
 	return cmd
 }

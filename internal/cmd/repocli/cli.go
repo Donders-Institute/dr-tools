@@ -55,6 +55,9 @@ var recursive bool
 var overwrite bool
 var longformat bool
 var errfile string
+var mgetDir string
+var mgetParent string
+var mputDir string
 
 // command to list a file or the content of a directory in the repository.
 func lsCmd() *cobra.Command {
@@ -440,6 +443,210 @@ By default, the download process will skip existing files already in the reposit
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
 
+	return cmd
+}
+
+func mgetCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mget <repo_file1|repo_dir1> [repo_file2|repo_dir2] ...",
+		Short: "download multiple files or directories from the repository",
+		Long:  ``,
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// resolve destination to local absolute path
+			lp, err := filepath.Abs(mgetDir)
+			if err != nil {
+				return err
+			}
+
+			// make sure the local path is accessible and is a directory
+			lfinfo, err := os.Stat(lp)
+			if err != nil {
+				return err
+			}
+
+			if !lfinfo.IsDir() {
+				return fmt.Errorf("destination not a directory: %s", mgetDir)
+			}
+
+			// handle signal for interruption
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
+			go func() {
+				trapCancel(ctx)
+				log.Debugf("stopping command: %s\n", cmd.Name())
+				cancel()
+			}()
+
+			// progress bar showing transfer rate in bytes
+			pbar := initDynamicMaxProgressbar("downloading...", true)
+
+			// channel for queueing operations
+			ichan := make(chan opInput)
+
+			// channel for notifying main process that all operations are done
+			wchan := make(chan struct{})
+			defer close(wchan)
+
+			// running operations
+			go func() {
+
+				// perform data transfer with 4 concurrent workers
+				cntOk, cntErr := runOp(ctx, Get, ichan, 4, pbar)
+				// log statistics
+				if !silent {
+					log.Infof("no. succeeded: %d, no. failed: %d", cntOk, cntErr)
+				}
+
+				wchan <- struct{}{}
+			}()
+
+			// resolve common parent into a clean, absolute path
+			mgetParent := getCleanRepoPath(mgetParent)
+
+			// walk through all arguments to construct operation inputs
+		loop:
+			for _, arg := range args {
+				select {
+				case <-ctx.Done():
+					break loop
+				default:
+					p := getCleanRepoPath(arg)
+
+					f, err := cli.Stat(p)
+					if err != nil {
+						return err
+					}
+
+					// repo pathInfo
+					pfinfoRepo := pathFileInfo{
+						path: p,
+						info: f,
+					}
+
+					if f.IsDir() {
+
+						// construction local destination taking into account `mgetParent`
+						lpp := filepath.Join(
+							lp,
+							strings.TrimPrefix(p, mgetParent),
+						)
+
+						pfinfoLocal := pathFileInfo{
+							path: lpp,
+						}
+
+						if err := os.MkdirAll(lpp, pfinfoRepo.info.Mode()); err != nil {
+							return err
+						}
+
+						walkRepoDirForGet(ctx, pfinfoRepo, pfinfoLocal, ichan, false, pbar)
+
+					} else {
+
+						pbar.ChangeMax64(pbar.GetMax64() + pfinfoRepo.info.Size())
+
+						lpp := filepath.Join(
+							lp,
+							strings.TrimPrefix(p, mgetParent),
+						)
+
+						pfinfoLocal := pathFileInfo{
+							path: lpp,
+						}
+
+						ichan <- opInput{
+							src: pfinfoRepo,
+							dst: pfinfoLocal,
+						}
+					}
+				}
+			}
+
+			// close the input channel
+			close(ichan)
+
+			// substract the pbar artifact due to dynamic total
+			pbar.ChangeMax(pbar.GetMax() - 1)
+
+			// waiting for all operations are done
+			<-wchan
+
+			return nil
+		},
+		ValidArgsFunction: func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if shellMode {
+				p := cwd
+				if toComplete != "" {
+					p = toComplete
+				}
+				return append([]string{".", ".."}, getContentNamesRepo(p, false)...), cobra.ShellCompDirectiveNoFileComp
+			}
+			return nil, cobra.ShellCompDirectiveError
+		},
+	}
+
+	// // repo path completion for flag `parent`
+	// cmd.RegisterFlagCompletionFunc(
+	// 	"parent",
+	// 	func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	// 		if shellMode {
+	// 			p := cwd
+	// 			if toComplete != "" {
+	// 				p = toComplete
+	// 			}
+	// 			return append([]string{".", ".."}, getContentNamesRepo(p, false)...), cobra.ShellCompDirectiveNoFileComp
+	// 		}
+	// 		return nil, cobra.ShellCompDirectiveError
+	// 	},
+	// )
+
+	// // repo path completion for flag `dest`
+	// cmd.RegisterFlagCompletionFunc(
+	// 	"dest",
+	// 	func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	// 		if shellMode {
+	// 			p := lcwd
+	// 			if toComplete != "" {
+	// 				p = toComplete
+	// 			}
+	// 			return append([]string{".", ".."}, getContentNamesLocal(p, true)...), cobra.ShellCompDirectiveNoFileComp
+	// 		}
+	// 		return nil, cobra.ShellCompDirectiveError
+	// 	},
+	// )
+
+	cmd.Flags().StringVarP(&mgetParent, "parent", "p", cwd, "common parent repo path")
+	cmd.Flags().StringVarP(&mgetDir, "dest", "d", lcwd, "destination path at local")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
+	return cmd
+}
+
+func mputCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mput <local_file1|local_dir1> [local_file2|local_dir2] ...",
+		Short: "upload multiple files or directories to the repository",
+		Long:  ``,
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			return nil
+		},
+		ValidArgsFunction: func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if shellMode {
+				p := lcwd
+				if toComplete != "" {
+					p = toComplete
+				}
+				return append([]string{".", ".."}, getContentNamesLocal(p, false)...), cobra.ShellCompDirectiveNoFileComp
+			}
+			return nil, cobra.ShellCompDirectiveError
+		},
+	}
+
+	cmd.Flags().StringVarP(&mputDir, "dest", "d", cwd, "destination path at local")
 	return cmd
 }
 
