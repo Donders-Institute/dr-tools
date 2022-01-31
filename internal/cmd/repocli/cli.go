@@ -456,25 +456,25 @@ The "mget" subcommand is for downloading multiple files and directories from the
 
 The sources are specified via arguments; while the destination is specified by an optional flag "-d".
 
-If the destination flag "-d" is not specified, the default is the current working directory at local. 
+If the destination flag "-d" is not specified, the current working directory at local is used as the destination. 
 
 By default, sources are downloaded into the destination with file or directory constructed from the base (last) part of the path. For example,
 
-  * for a source file "/dccn/DAC_3010000.01_173/test.txt", it will be downloaded to a file called "test.txt" under the current working directory.
+  * for a source file "/dccn/DAC_3010000.01_173/test.txt", it will be downloaded to a file called "test.txt" under the destinating directory.
 
-  * for a source directory "/dccn/DAC_3010000.01_173/testdir", the content (files and sub-directories) of this directory will be downloaded to a directory "testdir" under the current working directory.
+  * for a source directory "/dccn/DAC_3010000.01_173/testdir", the content (files and sub-directories) of this directory will be downloaded to a directory "testdir" under the destinating directory.
 
-This behavior can be changed by using the "--parents" flag, which will preserve the sources' parent directories under the destination.  Using the same example,
+This behavior can be changed by using the "--parents" flag, which will preserve the sources' parent directories.  Using the same example,
 
-  * the source file "/dccn/DAC_3010000.01_173/test.txt" will be downloaded to "dccn/DAC_3010000.01_173/test.txt" under the current working directory, and
+  * the source file "/dccn/DAC_3010000.01_173/test.txt" will be downloaded to "dccn/DAC_3010000.01_173/test.txt" under the destinating directory, and
 
-  * the content of the source "/dccn/DAC_3010000.01_173/testdir" will be downloaded to "dccn/DAC_3010000.01_173/testdir" under the current working directory.
+  * the content of the source "/dccn/DAC_3010000.01_173/testdir" will be downloaded to "dccn/DAC_3010000.01_173/testdir" under the destinating directory.
 
 The "--parents" flag can be combined with the "--strip" flag to strip a part on the source path.  For instance, if using "--strip=dccn" with "--parents",
 
-  * the source "/dccn/DAC_3010000.01_173/test.txt" is then downloaded to "DAC_3010000.01_173/test.txt" under the current working directory, and
+  * the source "/dccn/DAC_3010000.01_173/test.txt" is then downloaded to "DAC_3010000.01_173/test.txt" under the destinating directory, and
    
-  * the content of the source "/dccn/DAC_3010000.01_173/testdir" is downloaded to "DAC_3010000.01_173/testdir" under the current working directory.
+  * the content of the source "/dccn/DAC_3010000.01_173/testdir" is downloaded to "DAC_3010000.01_173/testdir" under the destinating directory.
 		`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -653,7 +653,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 
 	cmd.Flags().StringVarP(&mgetDir, "dest", "d", lcwd, "destination `path` at local")
 	cmd.Flags().BoolVarP(&parents, "parents", "", false, "use full source name under destination")
-	cmd.Flags().StringVarP(&mgetStrip, "strip", "", cwd, "`path` to be stripped from sources, only applicable with --parents")
+	cmd.Flags().StringVarP(&mgetStrip, "strip", "", cwd, "leading `path` to be stripped away from source paths when using the --parents flag")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
 	return cmd
