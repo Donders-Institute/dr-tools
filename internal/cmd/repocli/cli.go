@@ -476,6 +476,8 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
   * the source "/dccn/DAC_3010000.01_173/test.txt" is then downloaded to "DAC_3010000.01_173/test.txt" under the destinating directory, and
    
   * the content of the source "/dccn/DAC_3010000.01_173/testdir" is downloaded to "DAC_3010000.01_173/testdir" under the destinating directory.
+
+**Note** In the single-command mode, the default value of "--strip" is "/"; while the default is the current working directory in the repo (output of "cwd" sub-command) in the shell mode. 
 		`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -542,7 +544,9 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 
 					f, err := cli.Stat(p)
 					if err != nil {
-						return err
+						// print out error and move on to the next source
+						log.Errorf("%s\n", err)
+						continue loop
 					}
 
 					// repo pathInfo
@@ -553,7 +557,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 
 					if f.IsDir() {
 
-						// construction local destination taking into account `mgetParent`
+						// construction local destination taking into account `mgetStrip`
 						var elp = []string{lp}
 						if parents {
 							elp = append(elp, strings.Split(strings.TrimPrefix(p, mgetStrip), "/")...)
@@ -664,8 +668,34 @@ func mputCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mput <local_file1|local_dir1> [local_file2|local_dir2] ...",
 		Short: "upload multiple files or directories to the repository",
-		Long:  ``,
-		Args:  cobra.MinimumNArgs(1),
+		Long: `
+The "mput" subcommand is for uploading multiple files and directories at the local (as the sources) into a directory in the repository (as the destination).
+
+The sources are specified via arguments; while the destination is specified by an optional flag "-d".
+
+If the destination flag "-d" is not specified, the current working directory in the repository is used as the destination.
+
+By default, sources are uploaded into the destination with file or directory constructed from the base (last) part of the path. For example,
+
+	* for a source file "/project/3010000.01/test.txt", it will be uploaded to a file called "test.txt" under the destinating directory.
+
+	* for a source directory "/project/DAC_3010000.01/testdir", the content (files and sub-directories) of this directory will be uploaded to a directory "testdir" under the destinating directory.
+
+This behavior can be changed by using the "--parents" flag, which will preserve the sources' parent directories.  Using the same example,
+
+	* the source file "/project/3010000.01/test.txt" will be uploaded to "project/3010000.01/test.txt" under the destinating directory, and
+
+	* the content of the source "/project/3010000.01/testdir" will be uploaded to "project/3010000.01/testdir" under the destinating directory.
+
+The "--parents" flag can be combined with the "--strip" flag to strip a part on the source path.  For instance, if using "--strip=/project" with "--parents",
+
+	* the source "/project/3010000.01/test.txt" is then uploaded to "3010000.01/test.txt" under the destinating directory, and
+	
+	* the content of the source "/project/3010000.01/testdir" is uploaded to "3010000.01/testdir" under the destinating directory.
+
+**Note** The default value of "--strip" is the current working directory, and thus if the sources are all presented in the current working directory, the "--parents" makes no effect.
+		`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			// make sure destination is a directory
@@ -727,13 +757,13 @@ func mputCmd() *cobra.Command {
 					lp, err := filepath.Abs(arg)
 					if err != nil {
 						log.Errorf("%s\n", err)
-						break loop
+						continue loop
 					}
 
 					lf, err := os.Stat(lp)
 					if err != nil {
 						log.Errorf("%s\n", err)
-						break loop
+						continue loop
 					}
 
 					// local pathInfo
@@ -744,7 +774,7 @@ func mputCmd() *cobra.Command {
 
 					if lf.IsDir() {
 
-						// construction local destination taking into account `mgetParent`
+						// construction local destination taking into account `mputStrip`
 						var erp = []string{rp}
 						if parents {
 							erp = append(erp, strings.Split(strings.TrimPrefix(lp, mputStrip), string(os.PathSeparator))...)
@@ -775,7 +805,7 @@ func mputCmd() *cobra.Command {
 						}
 
 						rpp := path.Join(erp...)
-						if err := os.MkdirAll(path.Dir(rpp), 0755); err != nil {
+						if err := cli.MkdirAll(path.Dir(rpp), 0755); err != nil {
 							log.Errorf("%s\n", err)
 						}
 
