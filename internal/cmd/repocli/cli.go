@@ -677,21 +677,21 @@ If the destination flag "-d" is not specified, the current working directory in 
 
 By default, sources are uploaded into the destination with file or directory constructed from the base (last) part of the path. For example,
 
-	* for a source file "/project/3010000.01/test.txt", it will be uploaded to a file called "test.txt" under the destinating directory.
+  * for a source file "/project/3010000.01/test.txt", it will be uploaded to a file called "test.txt" under the destinating directory.
 
-	* for a source directory "/project/DAC_3010000.01/testdir", the content (files and sub-directories) of this directory will be uploaded to a directory "testdir" under the destinating directory.
+  * for a source directory "/project/DAC_3010000.01/testdir", the content (files and sub-directories) of this directory will be uploaded to a directory "testdir" under the destinating directory.
 
 This behavior can be changed by using the "--parents" flag, which will preserve the sources' parent directories.  Using the same example,
 
-	* the source file "/project/3010000.01/test.txt" will be uploaded to "project/3010000.01/test.txt" under the destinating directory, and
+  * the source file "/project/3010000.01/test.txt" will be uploaded to "project/3010000.01/test.txt" under the destinating directory, and
 
-	* the content of the source "/project/3010000.01/testdir" will be uploaded to "project/3010000.01/testdir" under the destinating directory.
+  * the content of the source "/project/3010000.01/testdir" will be uploaded to "project/3010000.01/testdir" under the destinating directory.
 
 The "--parents" flag can be combined with the "--strip" flag to strip a part on the source path.  For instance, if using "--strip=/project" with "--parents",
 
-	* the source "/project/3010000.01/test.txt" is then uploaded to "3010000.01/test.txt" under the destinating directory, and
+  * the source "/project/3010000.01/test.txt" is then uploaded to "3010000.01/test.txt" under the destinating directory, and
 	
-	* the content of the source "/project/3010000.01/testdir" is uploaded to "3010000.01/testdir" under the destinating directory.
+  * the content of the source "/project/3010000.01/testdir" is uploaded to "3010000.01/testdir" under the destinating directory.
 
 **Note** The default value of "--strip" is the current working directory, and thus if the sources are all presented in the current working directory, the "--parents" makes no effect.
 		`,
