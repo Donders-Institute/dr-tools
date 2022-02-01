@@ -11,6 +11,8 @@ The following operations are currently implemented:
 - rm: remove a file or a directory
 - get: download a file or a directory
 - put: upload a file or a directory
+- mget: download multiple files or directories
+- mput: upload multiple files or directories
 
 When performing recursive operation on a directory, the tool does a directory walk-through and applies the operation on individual files in parallel.  This approach breaks down a lengthy bulk-operation request into multiple shorter, less resource demanding requests.  It helps improve the overall success rate of the operation.
 
@@ -29,14 +31,16 @@ Available Commands:
   help        Help about any command
   login       login the repository with the data-access account
   ls          list file or directory in the repository
+  mget        download multiple files or directories from the repository
   mkdir       create new directory in the repository
+  mput        upload multiple files or directories to the repository
   mv          move file or directory in the repository
   put         upload file or directory to the repository
   rm          remove file or directory from the repository
   shell       start an interactive shell
 
 Flags:
-  -c, --config path       path of the configuration YAML file. (default "/home/tg/honlee/.repocli.yml")
+  -c, --config path       path of the configuration YAML file. (default "/home/honlee/.repocli.yml")
   -h, --help              help for repocli
   -n, --nthreads number   number of concurrent worker threads. (default 4)
   -s, --silent            set to slient mode (i.e. do not show progress)
