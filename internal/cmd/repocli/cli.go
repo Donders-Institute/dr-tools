@@ -58,6 +58,7 @@ var errfile string
 var mgetDir string
 var mgetStrip string
 var mputDir string
+var mputStrip string
 var parents bool
 
 // command to list a file or the content of a directory in the repository.
@@ -667,6 +668,137 @@ func mputCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			// make sure destination is a directory
+			rp := getCleanRepoPath(mputDir)
+			rfinfo, err := cli.Stat(rp)
+			if err != nil {
+				return err
+			}
+
+			if !rfinfo.IsDir() {
+				return fmt.Errorf("destination not a directory: %s", mputDir)
+			}
+
+			// resolve common parent into a clean, absolute path
+			mputStrip, err = filepath.Abs(mputStrip)
+			if err != nil {
+				return err
+			}
+
+			// handle signal for interruption
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
+			go func() {
+				trapCancel(ctx)
+				log.Debugf("stopping command: %s\n", cmd.Name())
+				cancel()
+			}()
+
+			// progress bar showing transfer rate in bytes
+			pbar := initDynamicMaxProgressbar("uploading...", true)
+
+			// channel for queueing operations
+			ichan := make(chan opInput)
+
+			// channel for notifying main process that all operations are done
+			wchan := make(chan struct{})
+			defer close(wchan)
+
+			// running operations
+			go func() {
+
+				// perform data transfer with 4 concurrent workers
+				cntOk, cntErr := runOp(ctx, Put, ichan, 4, pbar)
+				// log statistics
+				if !silent {
+					log.Infof("no. succeeded: %d, no. failed: %d", cntOk, cntErr)
+				}
+
+				wchan <- struct{}{}
+			}()
+
+			// walk through all arguments to construct operation inputs
+		loop:
+			for _, arg := range args {
+				select {
+				case <-ctx.Done():
+					break loop
+				default:
+					lp, err := filepath.Abs(arg)
+					if err != nil {
+						log.Errorf("%s\n", err)
+						break loop
+					}
+
+					lf, err := os.Stat(lp)
+					if err != nil {
+						log.Errorf("%s\n", err)
+						break loop
+					}
+
+					// local pathInfo
+					pfinfoLocal := pathFileInfo{
+						path: lp,
+						info: lf,
+					}
+
+					if lf.IsDir() {
+
+						// construction local destination taking into account `mgetParent`
+						var erp = []string{rp}
+						if parents {
+							erp = append(erp, strings.Split(strings.TrimPrefix(lp, mputStrip), string(os.PathSeparator))...)
+						} else {
+							erp = append(erp, filepath.Base(lp))
+						}
+
+						rpp := path.Join(erp...)
+						if err := cli.MkdirAll(rpp, 0755); err != nil {
+							log.Errorf("%s\n", err)
+						}
+
+						pfinfoRepo := pathFileInfo{
+							path: rpp,
+						}
+						walkLocalDirForPut(ctx, pfinfoLocal, pfinfoRepo, ichan, false, pbar)
+
+					} else {
+
+						pbar.ChangeMax64(pbar.GetMax64() + pfinfoLocal.info.Size())
+
+						erp := []string{rp}
+
+						if parents {
+							erp = append(erp, strings.Split(strings.TrimPrefix(lp, mputStrip), string(os.PathSeparator))...)
+						} else {
+							erp = append(erp, path.Base(lp))
+						}
+
+						rpp := path.Join(erp...)
+						if err := os.MkdirAll(path.Dir(rpp), 0755); err != nil {
+							log.Errorf("%s\n", err)
+						}
+
+						pfinfoRepo := pathFileInfo{
+							path: rpp,
+						}
+						ichan <- opInput{
+							src: pfinfoLocal,
+							dst: pfinfoRepo,
+						}
+					}
+				}
+			}
+
+			// close the input channel
+			close(ichan)
+
+			// substract the pbar artifact due to dynamic total
+			pbar.ChangeMax(pbar.GetMax() - 1)
+
+			// waiting for all operations are done
+			<-wchan
+
 			return nil
 		},
 		ValidArgsFunction: func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -681,7 +813,12 @@ func mputCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&mputDir, "dest", "d", cwd, "destination path at local")
+	cmd.Flags().StringVarP(&mputDir, "dest", "d", cwd, "destination `path` in the repository")
+	cmd.Flags().BoolVarP(&parents, "parents", "", false, "use full source name under destination")
+	cmd.Flags().StringVarP(&mputStrip, "strip", "", lcwd, "leading `path` to be stripped away from source paths when using the --parents flag")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
+
 	return cmd
 }
 
