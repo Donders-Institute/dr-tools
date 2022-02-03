@@ -122,18 +122,18 @@ If no argument is provided, it lists the content of the root ("/") WebDAV path.
 					fmt.Printf("%11s %12d %s %s\n", f.Mode(), f.Size(), f.ModTime().Format(time.UnixDate), path.Join(p, f.Name()))
 				}
 			} else {
-				isDirMarker := make(map[bool]rune, 2)
-				isDirMarker[true] = '/'
-				isDirMarker[false] = 0
+				isDirMarker := make(map[bool]string, 2)
+				isDirMarker[true] = "/"
+				isDirMarker[false] = ""
 
 				for _, f := range files {
 					if f.Name() == "" {
 						// in case of listing a single file, the `f.Name`` from the `cli.State` is empty.
 						// we need to get the filename from the input argument `p`
-						fmt.Printf("%s%c\n", path.Base(p), isDirMarker[f.Mode().IsDir()])
+						fmt.Printf("%s%s\n", path.Base(p), isDirMarker[f.Mode().IsDir()])
 						continue
 					}
-					fmt.Printf("%s%c\n", f.Name(), isDirMarker[f.Mode().IsDir()])
+					fmt.Printf("%s%s\n", f.Name(), isDirMarker[f.Mode().IsDir()])
 				}
 			}
 			return nil
