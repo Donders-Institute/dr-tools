@@ -58,7 +58,9 @@ The credential (username and password) of the data-access account should be prov
 $ repocli login
 ```
 
-You will be asked to provide the WebDAV's baseURL, username and password.  After providing those values, type `y` to save the credential to the configuration file.  Once it is done successfully, you can reuse the configuration file in the future to connect to the same WebDAV endpoint.
+You will be asked to provide the WebDAV's baseURL, username and password.  For the Donders Repository users, the baseURL is `https://webdav.data.donders.ru.nl`.  The username and password are your data-access account credential, see [here](https://data.donders.ru.nl/doc/help/user-manual/transfer-data/data-access-account.html) for more detail.
+
+After providing those values, type `y` to save the credential to the configuration file.  Once it is done successfully, you can reuse the configuration file in the future to connect to the same WebDAV endpoint.
 
 💡You can use the `login` subcommand with the `-c` option to create multiple configuration files, each for a different WebDAV endpoint.
 
