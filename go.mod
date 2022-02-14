@@ -9,7 +9,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.8.5
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
-	github.com/studio-b12/gowebdav v0.0.0-20210917133250-a3a86976a1df
+	github.com/studio-b12/gowebdav v0.0.0-20220128162035-c7b1ff8a5e62
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	gopkg.in/yaml.v2 v2.4.0
