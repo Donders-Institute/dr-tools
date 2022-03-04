@@ -2,12 +2,12 @@ package repocli
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"encoding/hex"
 	"syscall"
 	"time"
 
@@ -139,6 +139,7 @@ The "lls" subcommand is for listing files and directories at local, with wildcar
 			if f, err := os.Stat(p); err == nil {
 				if !f.IsDir() {
 					// user input is a file
+					p = filepath.Dir(p)
 					files = append(files, f)
 				} else {
 					// user input is a directory
