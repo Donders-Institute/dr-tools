@@ -142,7 +142,7 @@ curl -L https://github.com/${GH_ORG}/${GH_REPO_NAME}/archive/refs/tags/${tag}.ta
 ## build repocli binaries
 tar xvzf ${tmp_dir}/${tag}.tar.gz --strip-components=1 -C ${tmp_dir} && 
     mkdir ${tmp_dir}/gopath &&
-    GOPATH=${tmp_dir}/gopath make -C ${tmp_dir} build_repocli_windows build_repocli_macosx
+    GOPATH=${tmp_dir}/gopath make -C ${tmp_dir} build_repocli build_repocli_windows build_repocli_macosx
 
 [ $? -ne 0 ] && echo "fail to build repocli binaries" >&2 && exit 1
 
