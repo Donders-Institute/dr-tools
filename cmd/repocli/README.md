@@ -16,6 +16,20 @@ The following operations are currently implemented:
 
 When performing recursive operation on a directory, the tool does a directory walk-through and applies the operation on individual files in parallel.  This approach breaks down a lengthy bulk-operation request into multiple shorter, less resource demanding requests.  It helps improve the overall success rate of the operation.
 
+## Download
+
+The `repocli` tool is provided as a single binary file which can be downloaded from the [here](https://github.com/Donders-Institute/dr-tools/releases).
+
+Download the asset file `repocli` for Linux, `repocli.darwin` for Intel-based MacOSX and `repocli.exe` for Windows.
+
+You can place the file in any directory as long as the directory is part of the `$PATH` variable (or `%PATH%` for Windows).
+
+For Linux and MacOSX users, you also need to make the downloaded file executable, e.g.
+
+```bash
+$ chmod +x repocli
+```
+
 ## Usage
 
 ```
