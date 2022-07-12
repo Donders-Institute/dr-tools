@@ -15,6 +15,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	dav "github.com/studio-b12/gowebdav"
+
 	log "github.com/Donders-Institute/tg-toolset-golang/pkg/logger"
 	"github.com/spf13/cobra"
 
@@ -1372,20 +1374,12 @@ loop:
 	}
 }
 
-// is404NotFountError checkes if the `err.Error()` contains a string `404 Not Found`.
-func is404NotFountError(err error) bool {
-	if err == nil {
-		return false
-	}
-	return strings.Contains(err.Error(), "404 Not Found")
-}
-
 // putRepoFile uploads a single local file to the repository.
 func putRepoFile(pfinfoLocal, pfinfoRepo pathFileInfo, showProgress bool) error {
 
 	if !overwrite {
 		// don't want existing files to be overwritten
-		if _, err := cli.Stat(pfinfoRepo.path); !is404NotFountError(err) {
+		if _, err := cli.Stat(pfinfoRepo.path); !dav.IsErrNotFound(err) {
 			log.Debugf("skip existing file %s\n", pfinfoRepo.path)
 			return nil
 		}
