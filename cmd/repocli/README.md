@@ -180,7 +180,7 @@ To download a remote file `/dccn/DAC_3010000.01_173/demo/test.txt` to `test.txt.
 $ repocli get /dccn/DAC_3010000.01_173/demo/test.txt $HOME/test.txt.new
 ```
 
-If the destination is a directory, file will be downloaded/uploaded into the directory with the same name.  If the destination is an existing file, the file will be overwritten by the content of the source.
+If the destination is a directory, file will be downloaded/uploaded into the directory with the same name.  If the destination is an existing file, the file will be skip by default.  One can use the `-f` option to overwrite the existing file.
 
 ### resursive uploading/downloading a directory
 
