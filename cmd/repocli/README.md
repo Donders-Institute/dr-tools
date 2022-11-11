@@ -226,3 +226,6 @@ $ repocli mv /dccn/DAC_3010000.01_173/demo /dccn/DAC_3010000.01_173/demo.new
 
 the end result will a new directory `/dccn/DAC_3010000.01_173/demo.new/demo` in which the data within the _source_ directory are moved over.
 
+## Error handling
+
+When performing an operation on a large amount of files, there can be temporary (server or network) issues causing errors on few files. While the errors are written to the terminal; one can use the `-e {filename}` option of `repocli` to save the errors to a text file `{filename}`.  This text file can be used to simplify the process of patching the operation.  The option is currently available for the `get`, `put`, `mget` and `mput` operations. 
