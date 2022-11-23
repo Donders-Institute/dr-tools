@@ -52,9 +52,10 @@ const (
 	Copy
 )
 
-//var dataDir string
+// var dataDir string
 var recursive bool
 var overwrite bool
+var maxretry uint8
 var longformat bool
 var errfile string
 var mgetDir string
@@ -298,6 +299,7 @@ By default, the upload process will skip existing files already in the repositor
 	}
 
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", 0, "make `N` retry attempts on failed put")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save upload errors to the specified `file`")
 
 	return cmd
@@ -445,6 +447,7 @@ By default, the download process will skip existing files already in the reposit
 	}
 
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", 0, "make `N` retry attempts on failed get")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
 
 	return cmd
@@ -663,6 +666,8 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 	cmd.Flags().StringVarP(&mgetStrip, "strip", "", cwd, "leading `path` to be stripped away from source paths when using the --parents flag")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
+	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", 0, "make `N` retry attempts on failed get")
+
 	return cmd
 }
 
@@ -850,6 +855,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 	cmd.Flags().StringVarP(&mputStrip, "strip", "", lcwd, "leading `path` to be stripped away from source paths when using the --parents flag")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
+	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", 0, "make `N` retry attempts on failed put")
 
 	return cmd
 }
@@ -1385,38 +1391,58 @@ func putRepoFile(pfinfoLocal, pfinfoRepo pathFileInfo, showProgress bool) error 
 		}
 	}
 
-	// open pathLocal
-	reader, err := os.Open(pfinfoLocal.path)
-	if err != nil {
-		return fmt.Errorf("cannot open local file: %s", err)
-	}
-	defer reader.Close()
+	doPut := func() error {
+		// progress bar
+		barDesc := prettifyProgressbarDesc(pfinfoLocal.info.Name())
+		bar := pb.DefaultBytesSilent(pfinfoLocal.info.Size(), barDesc)
+		if showProgress {
+			bar = pb.DefaultBytes(pfinfoLocal.info.Size(), barDesc)
+		}
 
-	// progress bar
-	barDesc := prettifyProgressbarDesc(pfinfoLocal.info.Name())
-	bar := pb.DefaultBytesSilent(pfinfoLocal.info.Size(), barDesc)
-	if showProgress {
-		bar = pb.DefaultBytes(pfinfoLocal.info.Size(), barDesc)
+		// open pathLocal
+		reader, err := os.Open(pfinfoLocal.path)
+		if err != nil {
+			return fmt.Errorf("cannot open local file: %s", err)
+		}
+		defer reader.Close()
+
+		// read pathRepo and write to pathLocal, the mode is not actually useful (!?)
+		err = cli.WriteStream(pfinfoRepo.path, reader, pfinfoLocal.info.Mode())
+		if err != nil {
+			return fmt.Errorf("cannot write %s to the repository: %s", pfinfoRepo.path, err)
+		}
+
+		// file size check after upload
+		f, err := cli.Stat(pfinfoRepo.path)
+		if err != nil {
+			return fmt.Errorf("cannot stat %s at the repository: %s", pfinfoRepo.path, err)
+		}
+
+		if f.Size() != pfinfoLocal.info.Size() {
+			return fmt.Errorf("file size %s mis-match: %d != %d", pfinfoRepo.path, f.Size(), pfinfoLocal.info.Size())
+		}
+
+		// TODO: this jumps from 0% to 100% ... not ideal but there is no way with to get upload progression with the webdav client library
+		bar.Add64(f.Size())
+
+		return nil
 	}
 
-	// read pathRepo and write to pathLocal, the mode is not actually useful (!?)
-	err = cli.WriteStream(pfinfoRepo.path, reader, pfinfoLocal.info.Mode())
-	if err != nil {
-		return fmt.Errorf("cannot write %s to the repository: %s", pfinfoRepo.path, err)
+	c := 0
+loop:
+	for {
+		if err := doPut(); err != nil {
+			c += 1
+			if c <= int(maxretry) {
+				log.Debugf("%s, retrying #%d", err, c)
+				continue
+			} else {
+				return err
+			}
+		} else {
+			break loop
+		}
 	}
-
-	// file size check after upload
-	f, err := cli.Stat(pfinfoRepo.path)
-	if err != nil {
-		return fmt.Errorf("cannot stat %s at the repository: %s", pfinfoRepo.path, err)
-	}
-
-	if f.Size() != pfinfoLocal.info.Size() {
-		return fmt.Errorf("file size %s mis-match: %d != %d", pfinfoRepo.path, f.Size(), pfinfoLocal.info.Size())
-	}
-
-	// TODO: this jumps from 0% to 100% ... not ideal but there is no way with to get upload progression with the webdav client library
-	bar.Add64(f.Size())
 
 	return nil
 }
@@ -1432,45 +1458,65 @@ func getRepoFile(pfinfoRepo, pfinfoLocal pathFileInfo, showProgress bool) error 
 		}
 	}
 
-	// open pathLocal
-	fileLocal, err := os.OpenFile(pfinfoLocal.path, os.O_WRONLY|os.O_CREATE, pfinfoRepo.info.Mode())
-	if err != nil {
-		return fmt.Errorf("cannot create/write local file: %s", err)
+	doGet := func() error {
+		// progress bar
+		barDesc := prettifyProgressbarDesc(path.Base(pfinfoRepo.path))
+		bar := pb.DefaultBytesSilent(pfinfoRepo.info.Size(), barDesc)
+		if showProgress {
+			bar = pb.DefaultBytes(pfinfoRepo.info.Size(), barDesc)
+		}
+
+		// open pathLocal
+		fileLocal, err := os.OpenFile(pfinfoLocal.path, os.O_WRONLY|os.O_CREATE, pfinfoRepo.info.Mode())
+		if err != nil {
+			return fmt.Errorf("cannot create/write local file: %s", err)
+		}
+		defer fileLocal.Close()
+
+		// multiwriter: destination local file, and progress bar
+		writer := io.MultiWriter(fileLocal, bar)
+
+		// read pathRepo and write to pathLocal
+		reader, err := cli.ReadStream(pfinfoRepo.path)
+		if err != nil {
+			return fmt.Errorf("cannot open file in repository: %s", err)
+		}
+		defer reader.Close()
+
+		buffer := make([]byte, 4*1024*1024) // 4MiB buffer
+
+		for {
+			// read content to buffer
+			rlen, rerr := reader.Read(buffer)
+			if rerr != nil && rerr != io.EOF {
+				return fmt.Errorf("failure reading data from %s: %s", pfinfoRepo.path, rerr)
+			}
+			wlen, werr := writer.Write(buffer[:rlen])
+			if werr != nil || rlen != wlen {
+				return fmt.Errorf("failure writing data to %s: %s", pfinfoLocal.path, werr)
+			}
+
+			if rerr == io.EOF {
+				break
+			}
+		}
+
+		return nil
 	}
-	defer fileLocal.Close()
 
-	// progress bar
-	barDesc := prettifyProgressbarDesc(path.Base(pfinfoRepo.path))
-	bar := pb.DefaultBytesSilent(pfinfoRepo.info.Size(), barDesc)
-	if showProgress {
-		bar = pb.DefaultBytes(pfinfoRepo.info.Size(), barDesc)
-	}
-
-	// multiwriter: destination local file, and progress bar
-	writer := io.MultiWriter(fileLocal, bar)
-
-	// read pathRepo and write to pathLocal
-	reader, err := cli.ReadStream(pfinfoRepo.path)
-	if err != nil {
-		return fmt.Errorf("cannot open file in repository: %s", err)
-	}
-	defer reader.Close()
-
-	buffer := make([]byte, 4*1024*1024) // 4MiB buffer
-
+	c := 0
+loop:
 	for {
-		// read content to buffer
-		rlen, rerr := reader.Read(buffer)
-		if rerr != nil && rerr != io.EOF {
-			return fmt.Errorf("failure reading data from %s: %s", pfinfoRepo.path, rerr)
-		}
-		wlen, werr := writer.Write(buffer[:rlen])
-		if werr != nil || rlen != wlen {
-			return fmt.Errorf("failure writing data to %s: %s", pfinfoLocal.path, err)
-		}
-
-		if rerr == io.EOF {
-			break
+		if err := doGet(); err != nil {
+			c += 1
+			if c <= int(maxretry) {
+				log.Debugf("%s, retrying #%d", err, c)
+				continue
+			} else {
+				return err
+			}
+		} else {
+			break loop
 		}
 	}
 
@@ -1690,9 +1736,8 @@ loop:
 // dynamically, and therefore the initial max is set to `1`. Caller should also reduce
 // the final max by `1` due to this artificial initial max, for example:
 //
-//     bar := initDynamicMaxProgressbar()
-//     bar.ChangeMax(bar.GetMax() - 1)
-//
+//	bar := initDynamicMaxProgressbar()
+//	bar.ChangeMax(bar.GetMax() - 1)
 func initDynamicMaxProgressbar(desc string, showBytes bool) *pb.ProgressBar {
 	if silent {
 		if showBytes {
