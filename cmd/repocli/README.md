@@ -180,7 +180,7 @@ To download a remote file `/dccn/DAC_3010000.01_173/demo/test.txt` to `test.txt.
 $ repocli get /dccn/DAC_3010000.01_173/demo/test.txt $HOME/test.txt.new
 ```
 
-If the destination is a directory, file will be downloaded/uploaded into the directory with the same name.  If the destination is an existing file, the file will be overwritten by the content of the source.
+If the destination is a directory, file will be downloaded/uploaded into the directory with the same name.  If the destination is an existing file, the file will be skip by default.  One can use the `-f` option to overwrite the existing file.
 
 ### resursive uploading/downloading a directory
 
@@ -226,3 +226,6 @@ $ repocli mv /dccn/DAC_3010000.01_173/demo /dccn/DAC_3010000.01_173/demo.new
 
 the end result will a new directory `/dccn/DAC_3010000.01_173/demo.new/demo` in which the data within the _source_ directory are moved over.
 
+## Error handling
+
+When performing an operation on a large amount of files, there can be temporary (server or network) issues causing errors on few files. While the errors are written to the terminal; one can use the `-e {filename}` option of `repocli` to save the errors to a text file `{filename}`.  This text file can be used to simplify the process of patching the operation.  The option is currently available for the `get`, `put`, `mget` and `mput` operations. 
