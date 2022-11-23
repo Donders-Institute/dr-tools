@@ -1,8 +1,10 @@
 package repoadm
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/Donders-Institute/dr-tools/internal/cmd/version"
 	"github.com/Donders-Institute/tg-toolset-golang/pkg/config"
 	log "github.com/Donders-Institute/tg-toolset-golang/pkg/logger"
 	"github.com/Donders-Institute/tg-toolset-golang/project/pkg/pdb"
@@ -25,6 +27,9 @@ const (
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "config.yml", "`path` of the configuration YAML file.")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+
+	rootCmd.AddCommand(versionCmd)
+
 	// initiate default logger
 	cfg = log.Configuration{
 		EnableConsole:     true,
@@ -58,7 +63,7 @@ func loadPdb() pdb.PDB {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "repoutil",
+	Use:   "repoadm",
 	Short: "The administrator's CLI for managing the Donders Repository",
 	Long:  ``,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -67,6 +72,16 @@ var rootCmd = &cobra.Command{
 			cfg.ConsoleLevel = log.Debug
 		}
 		log.NewLogger(cfg, log.InstanceLogrusLogger)
+	},
+}
+
+// versionCmd prints out the version number of the package.
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "print version number and exit",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("repoadm version: %s\n", version.Version)
 	},
 }
 

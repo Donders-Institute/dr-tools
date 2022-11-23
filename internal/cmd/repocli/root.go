@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/Donders-Institute/dr-tools/external/cobrashell"
+	"github.com/Donders-Institute/dr-tools/internal/cmd/version"
 	"github.com/Donders-Institute/tg-toolset-golang/pkg/config"
 	log "github.com/Donders-Institute/tg-toolset-golang/pkg/logger"
 	ustr "github.com/Donders-Institute/tg-toolset-golang/pkg/strings"
@@ -168,9 +169,19 @@ func New() *cobra.Command {
 		cmd.AddCommand(cdCmd, pwdCmd, lcdCmd, lpwdCmd, llsCmd())
 	}
 
-	cmd.AddCommand(lsCmd(), putCmd(), getCmd(), mgetCmd(), mputCmd(), rmCmd(), mvCmd(), cpCmd(), mkdirCmd, loginCmd)
+	cmd.AddCommand(versionCmd, lsCmd(), putCmd(), getCmd(), mgetCmd(), mputCmd(), rmCmd(), mvCmd(), cpCmd(), mkdirCmd, loginCmd)
 
 	return cmd
+}
+
+// versionCmd prints out the version number of the package.
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "print version number and exit",
+	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("repocli version: %s\n", version.Version)
+	},
 }
 
 // decryptPass decrypts the hex string back to the plaintext password
