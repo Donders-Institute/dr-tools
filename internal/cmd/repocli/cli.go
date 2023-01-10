@@ -55,7 +55,7 @@ const (
 // var dataDir string
 var recursive bool
 var overwrite bool
-var maxretry uint8
+var maxretry uint8 = 2
 var longformat bool
 var errfile string
 var mgetDir string
@@ -299,7 +299,7 @@ By default, the upload process will skip existing files already in the repositor
 	}
 
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
-	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", 0, "make `N` retry attempts on failed put")
+	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", maxretry, "make `N` retry attempts on failed put")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save upload errors to the specified `file`")
 
 	return cmd
@@ -447,7 +447,7 @@ By default, the download process will skip existing files already in the reposit
 	}
 
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
-	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", 0, "make `N` retry attempts on failed get")
+	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", maxretry, "make `N` retry attempts on failed get")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
 
 	return cmd
@@ -666,7 +666,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 	cmd.Flags().StringVarP(&mgetStrip, "strip", "", cwd, "leading `path` to be stripped away from source paths when using the --parents flag")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
-	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", 0, "make `N` retry attempts on failed get")
+	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", maxretry, "make `N` retry attempts on failed get")
 
 	return cmd
 }
@@ -855,7 +855,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 	cmd.Flags().StringVarP(&mputStrip, "strip", "", lcwd, "leading `path` to be stripped away from source paths when using the --parents flag")
 	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
-	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", 0, "make `N` retry attempts on failed put")
+	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", maxretry, "make `N` retry attempts on failed put")
 
 	return cmd
 }
