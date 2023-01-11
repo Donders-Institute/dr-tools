@@ -54,7 +54,7 @@ const (
 
 // var dataDir string
 var recursive bool
-var overwrite bool
+var overwrite bool = false
 var maxretry uint8 = 2
 var longformat bool
 var errfile string
@@ -183,7 +183,7 @@ results in the content of /tmp/data being uploaded into a new repository directo
 
 will have the content of /tmp/data uploaded into /dccn/DAC_3010000.01_173/data.
 
-By default, the upload process will skip existing files already in the repository.  One can use the "-f" flag to overwrite existing files.
+By default, the upload process will skip existing files already in the repository. A file is considered "existing" if its destination has the same size and later modification time comparing to its source. One can use the "-f" flag to overwrite existing files.
 	`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -298,7 +298,7 @@ By default, the upload process will skip existing files already in the repositor
 		},
 	}
 
-	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", overwrite, "overwrite the existing file")
 	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", maxretry, "make `N` retry attempts on failed put")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save upload errors to the specified `file`")
 
@@ -329,7 +329,7 @@ results in the content of /dccn/DAC_3010000.01_173/data being downloaded into a 
 
 will have the content of /dccn/DAC_3010000.01_173/data downloaded into /tmp/data.
 
-By default, the download process will skip existing files already in the repository.  One can use the "-f" flag to overwrite existing files.
+By default, the download process will skip existing files already in the repository.  A file is considered "existing" if its destination has the same size and later modification time comparing to its source.  One can use the "-f" flag to overwrite existing files.
 	`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -446,7 +446,7 @@ By default, the download process will skip existing files already in the reposit
 		},
 	}
 
-	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", overwrite, "overwrite the existing file")
 	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", maxretry, "make `N` retry attempts on failed get")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
 
@@ -664,7 +664,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 	cmd.Flags().StringVarP(&mgetDir, "dest", "d", lcwd, "destination `path` at local")
 	cmd.Flags().BoolVarP(&parents, "parents", "", false, "use full source name under destination")
 	cmd.Flags().StringVarP(&mgetStrip, "strip", "", cwd, "leading `path` to be stripped away from source paths when using the --parents flag")
-	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", overwrite, "overwrite the existing file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
 	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", maxretry, "make `N` retry attempts on failed get")
 
@@ -853,7 +853,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 	cmd.Flags().StringVarP(&mputDir, "dest", "d", cwd, "destination `path` in the repository")
 	cmd.Flags().BoolVarP(&parents, "parents", "", false, "use full source name under destination")
 	cmd.Flags().StringVarP(&mputStrip, "strip", "", lcwd, "leading `path` to be stripped away from source paths when using the --parents flag")
-	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", overwrite, "overwrite the existing file")
 	cmd.Flags().StringVarP(&errfile, "error", "e", "", "save download errors to the specified `file`")
 	cmd.Flags().Uint8VarP(&maxretry, "retry", "r", maxretry, "make `N` retry attempts on failed put")
 
@@ -974,7 +974,7 @@ By default, the copy process will skip existing files at the destination.  One c
 			return nil, cobra.ShellCompDirectiveError
 		},
 	}
-	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", overwrite, "overwrite the existing file")
 	return cmd
 }
 
@@ -1095,7 +1095,7 @@ Files not successfully moved over will be kept at the source.
 			return nil, cobra.ShellCompDirectiveError
 		},
 	}
-	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", false, "overwrite the destination file")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "f", overwrite, "overwrite the existing file")
 	return cmd
 }
 
@@ -1212,7 +1212,7 @@ func runOp(ctx context.Context, op Op, ichan chan opInput, nworkers int, pbar *p
 	// error log writer
 	errWriter := os.Stderr
 	if errfile != "" {
-		f, err := os.OpenFile(errfile, os.O_WRONLY|os.O_CREATE, 0600)
+		f, err := os.OpenFile(errfile, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
 			log.Errorf("cannot open file %s for error log: ", errfile, err)
 		}
@@ -1385,9 +1385,24 @@ func putRepoFile(pfinfoLocal, pfinfoRepo pathFileInfo, showProgress bool) error 
 
 	if !overwrite {
 		// don't want existing files to be overwritten
-		if _, err := cli.Stat(pfinfoRepo.path); !dav.IsErrNotFound(err) {
-			log.Debugf("skip existing file %s\n", pfinfoRepo.path)
-			return nil
+		if stat, err := cli.Stat(pfinfoRepo.path); !dav.IsErrNotFound(err) {
+
+			// fail to stat remote path, but the failure is no `file not found`.
+			if err != nil {
+				log.Debugf("skip file fail to check signature: %s\n", pfinfoRepo.path)
+				return nil
+			}
+
+			// compare file size
+			hasSameSize := stat.Size() == pfinfoLocal.info.Size()
+
+			// compare file modtime
+			isRepoNewer := stat.ModTime().After(pfinfoLocal.info.ModTime())
+
+			if hasSameSize && isRepoNewer {
+				log.Debugf("skip file with same signature (size + modtime): %s\n", pfinfoRepo.path)
+				return nil
+			}
 		}
 	}
 
@@ -1451,10 +1466,26 @@ loop:
 func getRepoFile(pfinfoRepo, pfinfoLocal pathFileInfo, showProgress bool) error {
 
 	if !overwrite {
+
 		// don't want existing files to be overwritten.
-		if _, err := os.Stat(pfinfoLocal.path); !errors.Is(err, os.ErrNotExist) {
-			log.Debugf("skip existing file %s\n", pfinfoLocal.path)
-			return nil
+		if stat, err := os.Stat(pfinfoLocal.path); !errors.Is(err, os.ErrNotExist) {
+
+			// fail to stat local path, but the failure is not `file not found`.
+			if err != nil {
+				log.Debugf("skip file fail to check signature: %s\n", pfinfoLocal.path)
+				return nil
+			}
+
+			// compare file size
+			hasSameSize := stat.Size() == pfinfoRepo.info.Size()
+
+			// compare file modtime
+			isLocalNewer := stat.ModTime().After(pfinfoRepo.info.ModTime())
+
+			if hasSameSize && isLocalNewer {
+				log.Debugf("skip file with same signature (size + modtime): %s\n", pfinfoLocal.path)
+				return nil
+			}
 		}
 	}
 
@@ -1467,7 +1498,7 @@ func getRepoFile(pfinfoRepo, pfinfoLocal pathFileInfo, showProgress bool) error 
 		}
 
 		// open pathLocal
-		fileLocal, err := os.OpenFile(pfinfoLocal.path, os.O_WRONLY|os.O_CREATE, pfinfoRepo.info.Mode())
+		fileLocal, err := os.OpenFile(pfinfoLocal.path, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, pfinfoRepo.info.Mode())
 		if err != nil {
 			return fmt.Errorf("cannot create/write local file: %s", err)
 		}
