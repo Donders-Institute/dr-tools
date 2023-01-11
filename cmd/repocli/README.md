@@ -166,7 +166,7 @@ It can be done with or without the existence of the parent tree structure `demo1
 
 For uploading/downloading a single file to/from the collection in the repository.  One use the `put` and `get` sub-commands, respectively.  The `put` and `get` sub-commands require two arguments.  The first argument refers to the _source_ path; while the second to the _destination_ path.
 
-The WebDAV path should always be in form of the absolute path (i.e. started with `/`); while the local path can be in a format recognized by the shell.
+The local path can be in a format recognized by the shell.  For the WebDAV path, although either the absolute form (i.e. started with `/`) or the relative form (i.e. started with `./` or `../`) can be used, the relative path makes more sense in the shell mode (i.e. `repocli shell`, see above) where one can change the current WebDAV directory using the `cd` command.  Outside the shell mode, the current WebDAV working directory is always the one defined by the configuration variable `baseURL`.
 
 For example, to upload a local file `test.txt` in the present working directory to `/dccn/DAC_3010000.01_173/demo/test.txt`, one does
 
