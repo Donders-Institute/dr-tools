@@ -246,7 +246,7 @@ By default, the upload process will skip existing files already in the repositor
 				pbar := initDynamicMaxProgressbar("uploading...", true)
 
 				// walk through repo directories
-				ichan := make(chan opInput)
+				ichan := make(chan opInput, 1000000)
 				go func() {
 					walkLocalDirForPut(ctx, pfinfoLocal, pfinfoRepo, ichan, true, pbar)
 					pbar.ChangeMax(pbar.GetMax() - 1)
@@ -393,7 +393,7 @@ By default, the download process will skip existing files already in the reposit
 				pbar := initDynamicMaxProgressbar("downloading...", true)
 
 				// walk through repo directories
-				ichan := make(chan opInput)
+				ichan := make(chan opInput, 1000000)
 				go func() {
 					walkRepoDirForGet(ctx, pfinfoRepo, pfinfoLocal, ichan, true, pbar)
 					pbar.ChangeMax(pbar.GetMax() - 1)
@@ -516,7 +516,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 			pbar := initDynamicMaxProgressbar("downloading...", true)
 
 			// channel for queueing operations
-			ichan := make(chan opInput)
+			ichan := make(chan opInput, 1000000)
 
 			// channel for notifying main process that all operations are done
 			wchan := make(chan struct{})
@@ -735,7 +735,7 @@ The "--parents" flag can be combined with the "--strip" flag to strip a part on 
 			pbar := initDynamicMaxProgressbar("uploading...", true)
 
 			// channel for queueing operations
-			ichan := make(chan opInput)
+			ichan := make(chan opInput, 1000000)
 
 			// channel for notifying main process that all operations are done
 			wchan := make(chan struct{})
