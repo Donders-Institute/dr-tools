@@ -231,3 +231,7 @@ the end result will a new directory `/dccn/DAC_3010000.01_173/demo.new/demo` in 
 When performing an operation on a large amount of files, there can be temporary (server or network) issues causing errors on few files. While the errors are written to the terminal; one can use the `-e {filename}` option of `repocli` to save the errors to a text file `{filename}`.  This text file can be used to simplify the process of patching the operation.  The option is currently available for the `get`, `put`, `mget` and `mput` operations.
 
 From version >= 0.5.0, `repocli` also supports retry on failed file upload and download.  This retry feature is disabled by default and can be enabled for `put`, `get`, `mput` and `mget` operations with the `-r N` option where `N` is the maximum number of retries (i.e. in total `N+1` attempts).
+
+## Calling `repocli` from scripts
+
+Since `repocli` is a standalone executable, one can integrate it with a script by making a system call.  An example script illustrating how to download subject MR data from the Donders Repository collection followed by processing the downloaded data locally can be found [here](example.sh).
