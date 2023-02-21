@@ -2,7 +2,7 @@
 ###############################################################################
 #
 #  This script illustrates an example of using the repocli to get the size and 
-#  total numnber of files in a remote (DR) directory.
+#  total numnber of files in a remote (WebDAV) directory.
 #
 ###############################################################################  
 
