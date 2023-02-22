@@ -234,4 +234,7 @@ From version >= 0.5.0, `repocli` also supports retry on failed file upload and d
 
 ## Calling `repocli` from scripts
 
-Since `repocli` is a standalone executable, one can integrate it with a script by making a system call.  An example script illustrating how to download subject MR data from the Donders Repository collection followed by processing the downloaded data locally can be found [here](example.sh).
+Since `repocli` is a standalone executable, it can be used within a shell script or by making a system call.  Hereafter are some examples:
+
+- [size.sh](https://github.com/Donders-Institute/dr-tools/blob/main/cmd/repocli/size.sh) gets the total size and number of files in a remote (WebDAV) directory.
+- [download_n_process.sh](https://github.com/Donders-Institute/dr-tools/blob/main/cmd/repocli/download_n_process.sh) downloads the MR data from a Donders Repository followed by processing it locally.
