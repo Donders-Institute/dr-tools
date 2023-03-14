@@ -297,7 +297,7 @@ var exportUpdateCmd = &cobra.Command{
 							log.Warnf("[%s] cannot map repo user to local user: %s", nLogical, u)
 							continue
 						}
-						log.Debugf("[%s] umap: %+v", um)
+						log.Debugf("[%s] umap: %+v", nLogical, um)
 
 						udel = append(udel, um)
 						acl = fmt.Sprintf("%s,%s", um.UIDLocal, acl)
