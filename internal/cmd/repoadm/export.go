@@ -260,7 +260,7 @@ var exportUpdateCmd = &cobra.Command{
 							log.Warnf("[%s] cannot map repo user to local user: %s", nLogical, u)
 							continue
 						}
-						log.Debugf("[%s] umap: %+v", um)
+						log.Debugf("[%s] umap: %+v", nLogical, um)
 
 						uadd = append(uadd, um)
 						acl = fmt.Sprintf("%s:r-x,%s", um.UIDLocal, acl)
@@ -324,7 +324,7 @@ var exportUpdateCmd = &cobra.Command{
 					}
 					log.Debugf("[%s] collExport: %+v", nLogical, coll)
 					if err := vdb.set("cmap", nPhysical, &coll); err != nil {
-						log.Errorf("[%s] cannot update viewerdb: %s", err)
+						log.Errorf("[%s] cannot update viewerdb: %s", nLogical, err)
 					}
 				}
 			}()
