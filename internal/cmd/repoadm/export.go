@@ -371,6 +371,14 @@ func findUmap(pdb pdb.PDB, vdb *store, uidRepo string) (Umap, error) {
 
 	// umap found in db, return it directly.
 	if err := vdb.get("umap", uidRepo, &um); err == nil {
+
+		// make sure the existing umap is still a valid local user
+		// TODO: delete the umap from the umap store if it is no longer a valid system user.
+		if _, err := user.Lookup(um.UIDLocal); err != nil {
+			log.Warnf("invalid local user in umap store: %s", um.UIDLocal)
+			return um, err
+		}
+
 		return um, nil
 	}
 
@@ -439,9 +447,9 @@ func (s *store) disconnect() error {
 }
 
 // init initialize two buckets in bolt db.
-// - umap: for storing uidRepo and uidLocal mapping via email.
-// - cmap: for storing a list of locally exported collections and
-//         their repo users (in uidRepo) with local access.
+//   - umap: for storing uidRepo and uidLocal mapping via email.
+//   - cmap: for storing a list of locally exported collections and
+//     their repo users (in uidRepo) with local access.
 func (s *store) init() error {
 
 	if s.db == nil {
