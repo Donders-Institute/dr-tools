@@ -78,10 +78,11 @@ func init() {
 		prompt.OptionScrollbarBGColor(prompt.Blue),
 		prompt.OptionScrollbarThumbColor(prompt.DarkGray),
 	)
-	shellCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+	shellCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		shellMode = true
 		// enable subcommands that make sense in interactive shell
-		rootCmd.AddCommand(loginCmd, cdCmd, pwdCmd, lcdCmd, lpwdCmd, llsCmd())
+		rootCmd.AddCommand(configCmd, cdCmd, pwdCmd, lcdCmd, lpwdCmd, llsCmd())
+		return initDavClient(shellMode)
 	}
 	rootCmd.AddCommand(shellCmd)
 
@@ -93,40 +94,6 @@ func init() {
 	}
 	log.NewLogger(cfg, log.InstanceLogrusLogger)
 }
-
-// var TestCmd = &cobra.Command{
-// 	Use:   "test",
-// 	Short: "a test command",
-// 	Long:  ``,
-// 	RunE: func(cmd *cobra.Command, args []string) error {
-
-// 		ctx, cancel := context.WithCancel(cmd.Context())
-// 		defer cancel()
-// 		go func() {
-// 			trapCancel(ctx)
-// 			cmd.Printf("stopping command: %s\n", cmd.Name())
-// 			cancel()
-// 		}()
-
-// 		tick := time.NewTicker(1000 * time.Millisecond)
-// 		defer tick.Stop()
-
-// 		cnt := 0
-// 		for {
-// 			select {
-// 			case <-tick.C:
-// 				cmd.Printf("running ...\n")
-// 				cnt++
-// 				if cnt > 10 {
-// 					cmd.Printf("loop finished\n")
-// 					return nil
-// 				}
-// 			case <-ctx.Done():
-// 				return fmt.Errorf("loop interrupted")
-// 			}
-// 		}
-// 	},
-// }
 
 func New() *cobra.Command {
 	cmd := &cobra.Command{
@@ -143,21 +110,7 @@ func New() *cobra.Command {
 				cfg.ConsoleLevel = log.Info
 			}
 			log.NewLogger(cfg, log.InstanceLogrusLogger)
-
-			c, _ := config.LoadConfig(configFile)
-			repoCfg := c.Repository
-
-			repoUser := repoCfg.Username
-			repoPass, _ := decryptPass(repoUser, repoCfg.Password)
-			baseURL := repoCfg.BaseURL
-
-			if cli == nil || (baseURL != "" && baseURL != davBaseURL) {
-				// initiate a new webdav client with new baseURL
-				davBaseURL = baseURL
-				cli = dav.NewClient(baseURL, repoUser, repoPass)
-			}
-
-			return nil
+			return initDavClient(!shellMode)
 		},
 	}
 
@@ -169,9 +122,35 @@ func New() *cobra.Command {
 		cmd.AddCommand(cdCmd, pwdCmd, lcdCmd, lpwdCmd, llsCmd())
 	}
 
-	cmd.AddCommand(versionCmd, lsCmd(), putCmd(), getCmd(), mgetCmd(), mputCmd(), rmCmd(), mvCmd(), cpCmd(), mkdirCmd, loginCmd)
+	cmd.AddCommand(versionCmd, lsCmd(), putCmd(), getCmd(), mgetCmd(), mputCmd(), rmCmd(), mvCmd(), cpCmd(), mkdirCmd, configCmd)
 
 	return cmd
+}
+
+// initDavClient initialize the DavClient instance
+func initDavClient(prompt bool) error {
+	c, err := config.LoadConfig(configFile)
+
+	switch {
+	case err != nil && !prompt:
+		return err
+	case err != nil && prompt:
+		log.Warnf("configuration file not found: %s", configFile)
+		return promptConfig(true)
+	default:
+		repoCfg := c.Repository
+
+		repoUser := repoCfg.Username
+		repoPass, _ := decryptPass(repoUser, repoCfg.Password)
+		baseURL := repoCfg.BaseURL
+
+		if cli == nil || (baseURL != "" && baseURL != davBaseURL) {
+			// initiate a new webdav client with new baseURL
+			davBaseURL = baseURL
+			cli = dav.NewClient(baseURL, repoUser, repoPass)
+		}
+		return nil
+	}
 }
 
 // versionCmd prints out the version number of the package.

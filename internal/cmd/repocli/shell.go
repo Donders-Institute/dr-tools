@@ -200,14 +200,14 @@ The "lls" subcommand is for listing files and directories at local, with wildcar
 	return cmd
 }
 
-// command to login repository
-var loginCmd = &cobra.Command{
-	Use:   "login",
-	Short: "login the repository with the data-access account",
+// command to config WebDAV connection
+var configCmd = &cobra.Command{
+	Use:   "config",
+	Short: "configure the repository connection and save the credential",
 	Long:  ``,
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return promptLogin()
+		return promptConfig(true)
 	},
 }
 
@@ -238,9 +238,9 @@ func getContentNamesRepo(path string, dirOnly bool) []string {
 	return names
 }
 
-// promptLogin asks username and password input for
+// promptConfig asks username and password input for
 // authenticating to the webdav interface.
-func promptLogin() error {
+func promptConfig(saveCredential bool) error {
 
 	// prompt for baseurl if it is not set in current shell
 	if davBaseURL == "" {
@@ -252,7 +252,10 @@ func promptLogin() error {
 	repoUser := stringPrompt("username")
 	repoPass := passwordPrompt("password")
 
-	save := boolPrompt("save credential")
+	// allow user to choose whether the credential should be saved in the configuration file
+	if !saveCredential {
+		saveCredential = boolPrompt("save credential")
+	}
 
 	// try to connect the repo webdav to check authentication
 	cli = dav.NewClient(davBaseURL, repoUser, repoPass)
@@ -260,33 +263,34 @@ func promptLogin() error {
 		return err
 	}
 
-	// save credential to `configFile`
-	if save {
-		return saveCredential(davBaseURL, repoUser, repoPass)
-	}
-
-	return nil
+	// save to configuration file `configFile`
+	return saveConfig(davBaseURL, repoUser, repoPass, saveCredential)
 }
 
-// saveCredential saves the username/password to the file `configFile` with file mode 600.
-func saveCredential(baseURL, username, password string) error {
+// saveConfig saves the username/password to the file `configFile` with file mode 600.
+func saveConfig(baseURL, username, password string, saveCredential bool) error {
 
 	// encrypt password before saving to the file
 	p, _ := filepath.Abs(configFile)
-	k := ustr.MD5Encode(fmt.Sprintf("%s.%s", p, username))
-	epass, err := ustr.Encrypt([]byte(password), []byte(k))
-	if err != nil {
-		return err
+
+	cfg := config.RepositoryConfiguration{
+		BaseURL:  baseURL,
+		Username: username,
+	}
+
+	if saveCredential {
+		k := ustr.MD5Encode(fmt.Sprintf("%s.%s", p, username))
+		epass, err := ustr.Encrypt([]byte(password), []byte(k))
+		if err != nil {
+			return err
+		}
+		cfg.Password = hex.EncodeToString(epass)
 	}
 
 	conf, err := yaml.Marshal(&struct {
 		Repository config.RepositoryConfiguration `yaml:"repository"`
 	}{
-		config.RepositoryConfiguration{
-			BaseURL:  baseURL,
-			Username: username,
-			Password: hex.EncodeToString(epass),
-		},
+		cfg,
 	})
 
 	if err != nil {
@@ -308,8 +312,7 @@ func saveCredential(baseURL, username, password string) error {
 		return err
 	}
 
-	log.Infof("credential saved in %s", configFile)
-
+	log.Infof("saved configuration in %s", configFile)
 	return nil
 }
 
