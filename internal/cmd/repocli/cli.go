@@ -1384,6 +1384,19 @@ loop:
 // putRepoFile uploads a single local file to the repository.
 func putRepoFile(pfinfoLocal, pfinfoRepo pathFileInfo, showProgress bool) error {
 
+	// determine local file size and modification time
+	ltsize := pfinfoLocal.info.Size()
+	ltmtime := pfinfoLocal.info.ModTime()
+
+	if pfinfoLocal.info.Mode()&fs.ModeSymlink != 0 {
+		// print a warning if the file is a symbolic link
+		logger.Warnf("symlink %s will be uploaded as regular file", pfinfoLocal.path)
+		if tinfo, err := os.Stat(pfinfoLocal.path); err == nil {
+			ltsize = tinfo.Size()
+			ltmtime = tinfo.ModTime()
+		}
+	}
+
 	if !overwrite {
 		// don't want existing files to be overwritten
 		if stat, err := cli.Stat(pfinfoRepo.path); !dav.IsErrNotFound(err) {
@@ -1395,10 +1408,10 @@ func putRepoFile(pfinfoLocal, pfinfoRepo pathFileInfo, showProgress bool) error 
 			}
 
 			// compare file size
-			hasSameSize := stat.Size() == pfinfoLocal.info.Size()
+			hasSameSize := stat.Size() == ltsize
 
 			// compare file modtime
-			isRepoNewer := stat.ModTime().After(pfinfoLocal.info.ModTime())
+			isRepoNewer := stat.ModTime().After(ltmtime)
 
 			if hasSameSize && isRepoNewer {
 				log.Debugf("skip file with same signature (size + modtime): %s\n", pfinfoRepo.path)
@@ -1422,11 +1435,6 @@ func putRepoFile(pfinfoLocal, pfinfoRepo pathFileInfo, showProgress bool) error 
 		}
 		defer reader.Close()
 
-		// print a warning if the file is a symbolic link
-		if pfinfoLocal.info.Mode()&fs.ModeSymlink != 0 {
-			logger.Warnf("%s is a symbolic link", pfinfoLocal.path)
-		}
-
 		// read pathRepo and write to pathLocal, the mode is not actually useful (!?)
 		err = cli.WriteStream(pfinfoRepo.path, reader, pfinfoLocal.info.Mode())
 		if err != nil {
@@ -1439,16 +1447,8 @@ func putRepoFile(pfinfoLocal, pfinfoRepo pathFileInfo, showProgress bool) error 
 			return fmt.Errorf("cannot stat %s at the repository: %s", pfinfoRepo.path, err)
 		}
 
-		// get actual file size if pfinfoLocal.info.Mode() == fs.ModeSymlink
-		lsize := pfinfoLocal.info.Size()
-		if pfinfoLocal.info.Mode()&fs.ModeSymlink != 0 {
-			if tinfo, err := os.Stat(pfinfoLocal.path); err == nil {
-				lsize = tinfo.Size()
-			}
-		}
-
-		if f.Size() != lsize {
-			return fmt.Errorf("file size %s mis-match: %d != %d", pfinfoRepo.path, f.Size(), lsize)
+		if f.Size() != ltsize {
+			return fmt.Errorf("file size %s mis-match: %d != %d", pfinfoRepo.path, f.Size(), ltsize)
 		}
 
 		// TODO: this jumps from 0% to 100% ... not ideal but there is no way with to get upload progression with the webdav client library
