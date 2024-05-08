@@ -1,6 +1,6 @@
-# repocli: cross-platform CLI for managing the Donders Repository data
+# repocli: cross-platform CLI for managing the Radboud Data Repository data
 
-A command-line tool for performing basic operations on the data content (not the metadata) of the Donders Repository collections.  In essense, it uses the WebDAV protocol to implemente the operations; therefore it is also a genetic tool for managing data accessible via WebDAV with the HTTP basic authentication (e.g. [SURFDrive](https://wiki.surfnet.nl/display/SURFdrive/Accessing+files+via+WebDAV)).
+A command-line tool for performing basic operations on the data content (not the metadata) of the [Radboud Data Repository](https://data.ru.nl) collections.  In essense, it uses the WebDAV protocol to implemente the operations; therefore it is also a genetic tool for managing data accessible via WebDAV with the HTTP basic authentication (e.g. [SURFDrive](https://wiki.surfnet.nl/display/SURFdrive/Accessing+files+via+WebDAV)).
 
 The following operations are currently implemented:
 
@@ -40,10 +40,10 @@ Usage:
 
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
+  config      configure the repository connection and save the credential
   cp          copy file or directory in the repository
   get         download file or directory from the repository
   help        Help about any command
-  login       login the repository with the data-access account
   ls          list file or directory in the repository
   mget        download multiple files or directories from the repository
   mkdir       create new directory in the repository
@@ -52,9 +52,10 @@ Available Commands:
   put         upload file or directory to the repository
   rm          remove file or directory from the repository
   shell       start an interactive shell
+  version     print version number and exit
 
 Flags:
-  -c, --config path       path of the configuration YAML file. (default "/home/honlee/.repocli.yml")
+  -c, --config path       path of the configuration YAML file. (default "/home/tg/honlee/.repocli.yml")
   -h, --help              help for repocli
   -n, --nthreads number   number of concurrent worker threads. (default 4)
   -s, --silent            set to slient mode (i.e. do not show progress)
@@ -69,7 +70,7 @@ __The configuration file__
 The credential (username and password) of the data-access account should be provided in a configuration file (specified by the `-c` option) in the YAML format.  The default location of this configuration file is `${HOME}/.repocli.yml` on Linux/MacOSX and `C:\Users\<username>\.repocli.yml` on Windows.  Since the program expects that the password stored in the configuration file is encrypted, it is better to use the following command to generate (or overwrite) the file:
 
 ```bash
-$ repocli login
+$ repocli config
 ```
 
 You will be asked to provide the WebDAV's baseURL, username and password.  For the Donders Repository users, the baseURL is `https://webdav.data.donders.ru.nl`.  The username and password are your data-access account credential, see [here](https://data.donders.ru.nl/doc/help/helppages/user-manual/transfer-data/data-access-account.html) for more detail.
