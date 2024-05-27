@@ -73,7 +73,7 @@ The credential (username and password) of the data-access account should be prov
 $ repocli config
 ```
 
-You will be asked to provide the WebDAV's baseURL, username and password.  For the Donders Repository users, the baseURL is `https://webdav.data.ru.nl`.  The username and password are your data-access account credential.  The credentail can be retrieved from the RDR web portal.  See the screenshot below as an example:
+You will be asked to provide the WebDAV's baseURL, username and password.  For the Radboud Data Repository users, the baseURL is `https://webdav.data.ru.nl`.  The username and password are your data-access account credential.  The credentail can be retrieved from the RDR web portal.  See the screenshot below as an example:
 
 ![screenshot of RDR data-access credential](screenshot-rdr-da-credential.png)
 
