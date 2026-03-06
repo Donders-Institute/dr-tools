@@ -146,7 +146,7 @@ func initDavClient(prompt bool) error {
 			log.Warnf("configuration file doesn't exist: %s, run `repocli config` first", configFile)
 			return err
 		}
-		return promptConfig(true)
+		return promptConfig(true, true)
 	}
 
 	// load configuration file when it exists

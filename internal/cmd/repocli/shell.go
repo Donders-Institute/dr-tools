@@ -29,7 +29,7 @@ The "login" subcommand configures the WebDAV client to use username/password for
 		`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		promptConfig(false)
+		promptConfig(false, false)
 		return nil
 	},
 }
@@ -234,7 +234,7 @@ var configCmd = &cobra.Command{
 	Long:  ``,
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return promptConfig(true)
+		return promptConfig(true, true)
 	},
 }
 
@@ -267,17 +267,31 @@ func getContentNamesRepo(path string, dirOnly bool) []string {
 
 // promptConfig asks username and password input for
 // authenticating to the webdav interface.
-func promptConfig(saveCredential bool) error {
+func promptConfig(reset bool, saveCredential bool) error {
+
+	var err error
 
 	// prompt for baseurl if it is not set in current shell
-	if davBaseURL == "" {
-		davBaseURL = stringPrompt("repo baseurl")
+	if reset || davBaseURL == "" {
+		davBaseURL, err = stringPromptInterruptable("repo baseurl")
+		if err != nil {
+			return err
+		}
 	}
 
-	fmt.Fprintf(os.Stderr, "login for %s\n", davBaseURL)
+	fmt.Fprintf(os.Stderr, "\rlogin for %s\n", davBaseURL)
 
-	repoUser := stringPrompt("username")
-	repoPass := passwordPrompt("password")
+	repoUser, err := stringPromptInterruptable("username")
+
+	if err != nil {
+		return err
+	}
+
+	repoPass, err := passwordPromptMasked("password")
+
+	if err != nil {
+		return err
+	}
 
 	// allow user to choose whether the credential should be saved in the configuration file
 	if !saveCredential {
@@ -336,14 +350,14 @@ func saveConfig(baseURL, username, password string, saveCredential bool) error {
 		return err
 	}
 
-	log.Infof("saved configuration in %s", configFile)
+	log.Infof("\rsaved configuration in %s", configFile)
 	return nil
 }
 
 // boolPrompt asks for a string value `y/n` and return a boolean accordingly.
 func boolPrompt(label string) bool {
 	var s string
-	fmt.Fprintf(os.Stderr, label+" [y/N]: ")
+	fmt.Fprintf(os.Stderr, "\r"+label+" [y/N]: ")
 	fmt.Scanf("%s\n", &s)
 
 	if s == "y" || s == "Y" {
@@ -360,6 +374,58 @@ func stringPrompt(label string) string {
 	return s
 }
 
+func stringPromptInterruptable(label string) (string, error) {
+
+	fmt.Fprintf(os.Stderr, "\r"+label+": ")
+
+	fd := int(os.Stdin.Fd())
+
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return "", err
+	}
+	defer term.Restore(fd, oldState)
+
+	var input []byte
+	buf := make([]byte, 1)
+
+	for {
+		_, err := os.Stdin.Read(buf)
+		if err != nil {
+			return "", err
+		}
+
+		b := buf[0]
+
+		switch b {
+
+		case '\r', '\n': // Enter
+			fmt.Println()
+			return string(input), nil
+
+		case 3: // Ctrl+C
+			fmt.Println("\r")
+			return "", errors.New("prompt interrupted")
+
+		case 127, 8: // Backspace
+			if len(input) > 0 {
+				input = input[:len(input)-1]
+				fmt.Fprint(os.Stderr, "\b \b")
+			}
+
+		case 27: // Escape sequence (arrow keys)
+			seq := make([]byte, 2)
+			os.Stdin.Read(seq) // discard
+
+		default:
+			if b >= 32 && b <= 126 {
+				input = append(input, b)
+				fmt.Fprintf(os.Stderr, "%c", b)
+			}
+		}
+	}
+}
+
 // passwordPrompt asks for a password value using the label
 func passwordPrompt(label string) string {
 	var s string
@@ -368,4 +434,60 @@ func passwordPrompt(label string) string {
 	s = string(b)
 	fmt.Println()
 	return s
+}
+
+func passwordPromptMasked(label string) (string, error) {
+
+	fmt.Fprint(os.Stderr, "\r"+label+": ")
+
+	fd := int(os.Stdin.Fd())
+
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return "", err
+	}
+	defer term.Restore(fd, oldState)
+
+	var password []byte
+	buf := make([]byte, 1)
+
+	for {
+		_, err := os.Stdin.Read(buf)
+		if err != nil {
+			return "", err
+		}
+
+		b := buf[0]
+
+		switch b {
+
+		// ENTER
+		case '\r', '\n':
+			fmt.Println()
+			return string(password), nil
+
+		// CTRL+C
+		case 3:
+			fmt.Println("\r")
+			return "", errors.New("interrupted")
+
+		// BACKSPACE
+		case 127, 8:
+			if len(password) > 0 {
+				password = password[:len(password)-1]
+				fmt.Fprint(os.Stderr, "\b \b")
+			}
+
+		// ESC sequence (arrow keys etc.)
+		case 27:
+			seq := make([]byte, 2)
+			os.Stdin.Read(seq) // discard escape sequence
+
+		default:
+			if b >= 32 && b <= 126 { // printable chars
+				password = append(password, b)
+				fmt.Fprint(os.Stderr, "*")
+			}
+		}
+	}
 }
